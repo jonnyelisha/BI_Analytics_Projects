@@ -1,0 +1,71 @@
+1. Average Revenue Growth per Decade by Company
+
+WITH Revenue_Decades AS (
+    SELECT 
+        Name,
+        Year,
+        Revenue_mil,
+        CASE 
+            WHEN Year BETWEEN 2000 AND 2009 THEN '2000s'
+            WHEN Year BETWEEN 2010 AND 2019 THEN '2010s'
+            -- Add more decades as needed
+        END AS decade
+    FROM dataset1.table123
+    WHERE Revenue_mil IS NOT NULL
+),
+Growth_Rate AS (
+    SELECT 
+        Name,
+        decade,
+        Year,
+        Revenue_mil,
+        LAG(Revenue_mil) OVER (PARTITION BY Name, decade ORDER BY Year) AS prev_revenue,
+        (Revenue_mil - LAG(Revenue_mil) OVER (PARTITION BY Name, decade ORDER BY Year)) / LAG(Revenue_mil) OVER (PARTITION BY Name, decade ORDER BY Year) * 100 AS growth_rates
+    FROM Revenue_Decades
+)
+SELECT 
+    Name,
+    decade,
+    AVG(growth_rates) AS avg_growth_rate
+FROM Growth_Rate
+WHERE growth_rates IS NOT NULL
+GROUP BY Name, decade
+ORDER BY Name, decade;
+
+
+
+2. Top 3 Industries by Total Revenue per Year
+WITH IndustryRevenue AS (
+    SELECT 
+        Industry,
+        Year,
+        SUM(Revenue_mil) AS total_revenue
+    FROM dataset1.table123
+    WHERE Revenue_mil IS NOT NULL
+    GROUP BY Industry, Year
+),
+RankedIndustries AS (
+    SELECT 
+        Industry,
+        Year,
+        total_revenue,
+        RANK() OVER (PARTITION BY Year ORDER BY total_revenue DESC) AS industry_rank
+    FROM IndustryRevenue
+)
+SELECT 
+    Industry,
+    Year,
+    total_revenue
+FROM RankedIndustries
+WHERE industry_rank <= 3
+ORDER BY Year, industry_rank;
+
+3.Yearly Revenue Trend per Industry
+SELECT 
+    Industry,
+    Year,
+    AVG(Revenue_mil) AS avg_revenue
+FROM dataset1.table123
+WHERE Revenue_mil IS NOT NULL
+GROUP BY Industry, Year
+ORDER BY Industry, Year;
